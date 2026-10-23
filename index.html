@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web App Creator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="toggleSidebar" class="icon-btn" title="Show/hide projects">☰</button>
+    <h1>Web App Creator</h1>
+    <input id="projectName" class="project-name" aria-label="Project name">
+    <span id="saveStatus" class="save-status">Saved</span>
+    <div class="spacer"></div>
+    <button id="runBtn" title="Run (Ctrl+Enter)">▶ Run</button>
+    <label class="toggle"><input type="checkbox" id="autoRun" checked> Auto-run</label>
+    <button id="openTabBtn" title="Open preview in a new tab">↗ Open</button>
+    <button id="exportBtn" title="Download as a single .html file">⬇ Export</button>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-head">
+        <h2>Projects</h2>
+        <button id="newBtn">+ New</button>
+      </div>
+      <ul id="projectList" class="project-list"></ul>
+      <div class="sidebar-foot">
+        <label class="file-btn">Import .html<input type="file" id="importInput" accept=".html,.htm" hidden></label>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="editor-pane">
+        <nav class="tabs">
+          <button class="tab active" data-file="html">HTML</button>
+          <button class="tab" data-file="css">CSS</button>
+          <button class="tab" data-file="js">JS</button>
+        </nav>
+        <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      </section>
+
+      <section class="preview-pane">
+        <div class="preview-bar">
+          <span>Preview</span>
+          <div class="spacer"></div>
+          <button id="clearConsole" class="small">Clear console</button>
+        </div>
+        <iframe id="preview" title="Preview" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe>
+        <pre id="console" class="console"></pre>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="newDialog">
+    <form method="dialog">
+      <h2>New project</h2>
+      <label>Name <input id="newName" value="My App" required></label>
+      <p>Start from a template:</p>
+      <div id="templateList" class="template-list"></div>
+      <menu>
+        <button value="cancel" formnovalidate>Cancel</button>
+        <button value="ok" class="primary">Create</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="templates.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
