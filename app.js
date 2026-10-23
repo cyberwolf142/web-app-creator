@@ -61,6 +61,12 @@ function createProject(name, templateId = "blank") {
     js: t.js,
     updated: Date.now(),
   };
+  if (t.bricks) {
+    project.mode = "bricks";
+    project.bricks = Bricks.sanitize(t.bricks);
+    project.theme = Bricks.sanitizeTheme(t.theme);
+    Object.assign(project, Bricks.generate(project.bricks, project.theme));
+  }
   projects.unshift(project);
   openProject(project.id);
   return project;
@@ -71,6 +77,10 @@ function openProject(id) {
   const p = current();
   if (!p) return;
   $("projectName").value = p.name;
+  const isBricks = p.mode === "bricks";
+  document.querySelector(".bricks-tab").hidden = !isBricks;
+  if (isBricks && activeFile !== "ai") activeFile = "bricks";
+  if (!isBricks && activeFile === "bricks") activeFile = "html";
   showFile(activeFile);
   window.dispatchEvent(new Event("wac:projectchange"));
   renderList();
@@ -126,19 +136,29 @@ function showFile(file) {
     t.classList.toggle("active", t.dataset.file === file);
   });
   const isChat = file === "ai";
-  editor.hidden = isChat;
+  const isBricks = file === "bricks";
+  const generated = current()?.mode === "bricks";
+  editor.hidden = isChat || isBricks;
   $("chatPanel").hidden = !isChat;
+  $("bricksPanel").hidden = !isBricks;
+  $("codeBanner").hidden = isChat || isBricks || !generated;
+  document.querySelector(".workspace").classList.toggle("wide-left", isBricks);
   if (isChat) {
     window.dispatchEvent(new Event("wac:showchat"));
     return;
   }
+  if (isBricks) {
+    window.dispatchEvent(new Event("wac:showbricks"));
+    return;
+  }
+  editor.readOnly = generated;
   editor.value = current()?.[file] ?? "";
   editor.scrollTop = 0;
 }
 
 editor.addEventListener("input", () => {
   const p = current();
-  if (!p || activeFile === "ai") return;
+  if (!p || activeFile === "ai" || activeFile === "bricks" || p.mode === "bricks") return;
   p[activeFile] = editor.value;
   p.updated = Date.now();
   scheduleSave();
@@ -308,7 +328,9 @@ $("newBtn").onclick = () => {
 dialog.addEventListener("close", () => {
   if (dialog.returnValue !== "ok") return;
   const prompt = $("newPrompt").value.trim();
-  const templateId = prompt ? "blank" : dialog.querySelector("input[name=template]:checked")?.value;
+  let templateId = dialog.querySelector("input[name=template]:checked")?.value;
+  // With a description, Claude builds from an empty project (bricks or code, matching the chosen template).
+  if (prompt) templateId = templateId?.startsWith("bricks") ? "bricks-blank" : "blank";
   createProject($("newName").value.trim(), templateId);
   if (prompt) {
     showFile("ai");
@@ -336,16 +358,30 @@ window.WAC = {
     }
     p.updated = Date.now();
     saveProjects();
-    if (activeFile !== "ai") showFile(activeFile);
+    if (["html", "css", "js"].includes(activeFile)) showFile(activeFile);
     run();
   },
   isActive: (id) => id === activeId,
+  activeFile: () => activeFile,
 };
+
+// Turn a brick project into a normal code project.
+$("detachBtn").onclick = () => {
+  const p = current();
+  if (!p || !confirm("Switch this project to code mode? You can edit the code freely, but you won't be able to use bricks for it any more. (Tip: duplicate the project first to keep a brick version.)")) return;
+  p.mode = "code";
+  delete p.bricks;
+  delete p.theme;
+  saveProjects();
+  openProject(p.id);
+};
+
+Bricks.initUI();
 
 // ---------- Start ----------
 
 if (projects.length === 0) {
-  createProject("My First App", "todo");
+  createProject("My First App", "bricks-starter");
 } else {
   let saved = null;
   try { saved = localStorage.getItem(ACTIVE_KEY); } catch {}

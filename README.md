@@ -4,6 +4,25 @@ A simple in-browser workspace for building small personal web apps — with **Cl
 Describe what you want, and Claude writes the HTML, CSS and JavaScript while you watch the preview.
 No installs, no build step.
 
+## 🧱 Building with bricks
+
+Build apps like Lego — no code needed:
+
+- **Drag** a brick from the palette onto your app (or **tap** it to add it after the selected brick).
+- **Stack bricks inside** Section, Row and Card bricks to group them.
+- **Click a brick** to change its settings; click empty space to change the page colors and font.
+- Hover a brick for **↑ ↓ ⧉ ✕** (move, duplicate, delete), or drag it somewhere else.
+
+Brick sets: **Layout** (section, row, card), **Text** (heading, text, list, link),
+**Media** (image, emoji, YouTube video, divider, spacer), **Inputs** (button, text box, slider, dropdown),
+and **Smart bricks** that already work on their own (counter, to-do list, timer, notepad, clock, random picker).
+
+**Connect bricks with variables:** give a text box the variable `name`, then write `Hello {{name}}!`
+in any heading or text brick — it updates as you type.
+
+The HTML/CSS/JS tabs show the code your bricks generate (read-only). When you outgrow bricks,
+click **Switch to code mode** there to edit the code by hand. Add your own bricks in `bricks.js`.
+
 ## Building with Claude
 
 1. Click **⚙** (top right) and paste your Anthropic API key
@@ -11,6 +30,7 @@ No installs, no build step.
 2. Open the **✨ Claude** tab and describe what to build or change, e.g.
    *"a habit tracker with a weekly grid"* or *"make the buttons bigger"*.
 3. Claude replies with a short explanation and updates the files; the preview reloads.
+   In a 🧱 brick project, Claude builds with bricks too — so you can keep tweaking by hand afterwards.
 
 Also:
 - **+ New → "Describe your app"** creates a project and has Claude build it from scratch.
@@ -68,6 +88,7 @@ To publish an app you *made* with it: click **Export**, rename the file to
 | `index.html`   | Page layout                                     |
 | `style.css`    | Look and feel (colors are at the top)           |
 | `app.js`       | Projects, editor, preview, export/import        |
+| `bricks.js`    | 🧱 Brick catalog, code generator and builder UI |
 | `ai.js`        | Claude chat: prompt, streaming, applying edits  |
 | `vendor/`      | Anthropic JavaScript SDK, bundled for browsers  |
 | `templates.js` | Starter templates — add your own here           |

@@ -22,6 +22,24 @@ Guidelines:
 - Keep code readable with short comments, since the user is learning and will build on it.
 - If the request is a question rather than a change, just answer it without code blocks.`;
 
+// Prompt for projects built with 🧱 bricks: Claude edits the brick tree as JSON.
+const BRICKS_PROMPT = () => `You are the assistant inside "Web App Creator". This project is built Lego-style from bricks: the user stacks bricks and the app's code is generated from them.
+Every request includes the current app as JSON. Reply in this format:
+1. One to three short sentences, in plain language for a beginner, saying what you built or changed.
+2. Then ONE fenced code block tagged bricks containing the COMPLETE new app as JSON: {"theme": {...}, "bricks": [...]}.
+   Each brick is {"type": "...", "props": {...}} and container bricks also have "children": [...]. Keep bricks the user didn't ask to change.
+
+Brick types (use only these types and props; omitted props get defaults):
+${Bricks.describeCatalog()}
+
+Theme: {"accent": "#rrggbb", "mode": "light"|"dark", "font": "system"|"rounded"|"serif"|"mono", "width": "narrow"|"medium"|"wide"}
+
+Tips:
+- Variables link bricks together: input, slider, dropdown (and counter, if given a variable) store a value under their "variable" name; heading/text and a button's message can show it with {{name}}.
+- Use sections, rows and cards to group things so the app looks tidy. Smart bricks (counter, todo, timer, notes, clock, picker) already work and save data on their own.
+- If something can't be done with bricks, build the closest version and mention that "Switch to code mode" (in the HTML/CSS/JS tabs) allows custom code.
+- If the request is a question rather than a change, just answer it without a code block.`;
+
 const $ = (id) => document.getElementById(id);
 const log = $("chatLog");
 const input = $("chatInput");
@@ -73,8 +91,8 @@ settingsDialog.addEventListener("close", () => {
 
 // ---------- Rendering ----------
 
-const FILE_LABEL = { html: "HTML", css: "CSS", js: "JS", javascript: "JS" };
-const FENCE = /```(html|css|js|javascript)[^\n]*\n([\s\S]*?)(```|$)/g;
+const FILE_LABEL = { html: "HTML", css: "CSS", js: "JS", javascript: "JS", bricks: "🧱 bricks" };
+const FENCE = /```(html|css|js|javascript|bricks)[^\n]*\n([\s\S]*?)(```|$)/g;
 
 function escapeHtml(s) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -166,6 +184,14 @@ function stripCode(text) {
   return text.replace(FENCE, (_, lang) => `[wrote the full ${FILE_LABEL[lang]} file]`).trim();
 }
 
+function currentState(p) {
+  if (p.mode === "bricks") {
+    const app = { theme: p.theme, bricks: Bricks.toPlain(p.bricks) };
+    return "Current app:\n\n```bricks\n" + JSON.stringify(app, null, 1) + "\n```";
+  }
+  return "Current files:\n\n" + filesBlock(p);
+}
+
 function buildMessages(p, request) {
   const history = (p.chat || []).slice(-MAX_HISTORY);
   // The API expects the conversation to start with a user message.
@@ -176,16 +202,16 @@ function buildMessages(p, request) {
   }));
   messages.push({
     role: "user",
-    content: `Project name: ${p.name}\n\nCurrent files:\n\n${filesBlock(p)}\n\nRequest: ${request}`,
+    content: `Project name: ${p.name}\n\n${currentState(p)}\n\nRequest: ${request}`,
   });
   return messages;
 }
 
-function requestParams(messages) {
+function requestParams(messages, p) {
   const params = {
     model: settings.model,
     max_tokens: 64000,
-    system: SYSTEM_PROMPT,
+    system: p.mode === "bricks" ? BRICKS_PROMPT() : SYSTEM_PROMPT,
     output_config: { effort: settings.effort },
     messages,
   };
@@ -201,6 +227,16 @@ function extractFiles(text) {
   const files = {};
   for (const m of text.matchAll(FENCE)) {
     if (m[3] !== "```") continue; // skip a block cut off mid-way
+    if (m[1] === "bricks") {
+      try {
+        const data = JSON.parse(m[2]);
+        files.bricks = Bricks.sanitize(Array.isArray(data) ? data : data.bricks);
+        files.theme = Array.isArray(data) ? null : data.theme;
+      } catch {
+        files.badBricks = true;
+      }
+      continue;
+    }
     const key = m[1] === "javascript" ? "js" : m[1];
     files[key] = m[2].replace(/\n$/, "") + "\n";
   }
@@ -243,7 +279,7 @@ async function ask(request) {
 
   try {
     const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
-    const stream = client.beta.messages.stream(requestParams(messages), { signal: controller.signal });
+    const stream = client.beta.messages.stream(requestParams(messages, project), { signal: controller.signal });
     stream.on("text", (delta) => {
       text += delta;
       bubble.innerHTML = formatAssistant(text, true);
@@ -258,14 +294,16 @@ async function ask(request) {
     }
 
     const files = extractFiles(text);
-    if (Object.keys(files).length) {
-      project.undo = [...(project.undo || []), { html: project.html, css: project.css, js: project.js }].slice(-MAX_UNDO);
-      if (WAC.isActive(project.id)) {
-        WAC.setFiles(files);
-      } else {
-        Object.assign(project, files);
-        WAC.saveProjects();
-      }
+    if (files.badBricks) text += "\n\n(Claude's bricks couldn't be read, so nothing changed. Try asking again.)";
+    const isBricks = project.mode === "bricks";
+    const brickChange = isBricks && files.bricks;
+    const codeChange = !isBricks && ["html", "css", "js"].some((k) => k in files);
+    if (brickChange || codeChange) {
+      project.undo = [...(project.undo || []), snapshot(project)].slice(-MAX_UNDO);
+      if (brickChange) Bricks.setTree(project, files.bricks, files.theme);
+      else Object.assign(project, { html: files.html ?? project.html, css: files.css ?? project.css, js: files.js ?? project.js });
+      if (WAC.isActive(project.id)) WAC.setFiles(project);
+      else WAC.saveProjects();
     }
     project.chat.push({ role: "assistant", text: text || "(no reply)" });
   } catch (err) {
@@ -310,11 +348,21 @@ input.addEventListener("keydown", (e) => {
 
 $("stopBtn").onclick = () => controller?.abort();
 
+function snapshot(p) {
+  const s = { html: p.html, css: p.css, js: p.js };
+  if (p.mode === "bricks") {
+    s.bricks = structuredClone(p.bricks);
+    s.theme = { ...p.theme };
+  }
+  return s;
+}
+
 $("undoBtn").onclick = () => {
   const p = WAC.current();
   const prev = p?.undo?.pop();
   if (!prev) return;
-  WAC.setFiles(prev);
+  if (prev.bricks && p.mode === "bricks") Bricks.setTree(p, prev.bricks, prev.theme);
+  WAC.setFiles(prev.bricks && p.mode === "bricks" ? p : prev);
   p.chat = p.chat || [];
   p.chat.push({ role: "assistant", text: "(You undid the last change.)" });
   WAC.saveProjects();

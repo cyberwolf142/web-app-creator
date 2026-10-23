@@ -2,6 +2,41 @@
 // To add your own, copy one of these blocks and change it.
 const TEMPLATES = [
   {
+    id: "bricks-starter",
+    name: "🧱 Starter app",
+    description: "Bricks: greeting, counter, timer, to-dos",
+    theme: { accent: "#4f6ef7", mode: "light", font: "rounded", width: "medium" },
+    bricks: [
+      {
+        type: "section",
+        props: { style: "tinted", padding: "large", align: "center" },
+        children: [
+          { type: "emoji", props: { emoji: "🧱", size: "medium" } },
+          { type: "heading", props: { text: "Hello {{name}}!", size: "large" } },
+          { type: "text", props: { text: "This app is built from bricks. Click any brick on the left to change it.", tone: "muted" } },
+          { type: "input", props: { label: "What's your name?", placeholder: "Type your name…", variable: "name" } },
+          { type: "button", props: { text: "Celebrate 🎉", action: "confetti" } },
+        ],
+      },
+      {
+        type: "row",
+        props: { gap: "medium" },
+        children: [
+          { type: "counter", props: { label: "Glasses of water", start: 0, step: 1 } },
+          { type: "timer", props: { label: "Focus time", minutes: 25 } },
+        ],
+      },
+      { type: "todo", props: { title: "Things to do today" } },
+    ],
+  },
+  {
+    id: "bricks-blank",
+    name: "🧱 Empty bricks",
+    description: "Start from scratch with bricks",
+    theme: { accent: "#d01012", mode: "light", font: "system", width: "medium" },
+    bricks: [],
+  },
+  {
     id: "blank",
     name: "Blank",
     description: "Empty page",

@@ -35,11 +35,23 @@
     <main class="workspace">
       <section class="editor-pane">
         <nav class="tabs">
+          <button class="tab bricks-tab" data-file="bricks" hidden>🧱 Bricks</button>
           <button class="tab active" data-file="html">HTML</button>
           <button class="tab" data-file="css">CSS</button>
           <button class="tab" data-file="js">JS</button>
           <button class="tab ai-tab" data-file="ai">✨ Claude</button>
         </nav>
+        <div id="codeBanner" class="code-banner" hidden>
+          🧱 This code is built from bricks, so it's read-only here.
+          <button type="button" id="detachBtn" class="small">Switch to code mode</button>
+        </div>
+        <div id="bricksPanel" class="bricks-panel" hidden>
+          <div id="brickPalette" class="brick-palette"></div>
+          <div class="brick-main">
+            <div id="brickCanvas" class="brick-canvas"></div>
+            <div id="brickInspector" class="brick-inspector"></div>
+          </div>
+        </div>
         <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
 
         <div id="chatPanel" class="chat-panel" hidden>
@@ -77,7 +89,7 @@
       <label>Describe your app <small class="muted">(optional — Claude builds it)</small>
         <textarea id="newPrompt" rows="3" placeholder="e.g. A pomodoro timer with a start/pause button and a progress ring"></textarea>
       </label>
-      <p>Or start from a template:</p>
+      <p>Or start from a template (🧱 = build with bricks, no code needed):</p>
       <div id="templateList" class="template-list"></div>
       <menu>
         <button value="cancel" formnovalidate>Cancel</button>
@@ -118,6 +130,7 @@
   </dialog>
 
   <script src="templates.js"></script>
+  <script src="bricks.js"></script>
   <script src="app.js"></script>
   <script type="module" src="ai.js"></script>
 </body>
