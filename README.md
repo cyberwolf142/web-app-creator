@@ -1,7 +1,27 @@
 # Web App Creator
 
-A simple in-browser workspace for building small personal web apps.
-No installs, no build step — just HTML, CSS and JavaScript.
+A simple in-browser workspace for building small personal web apps — with **Claude** built in.
+Describe what you want, and Claude writes the HTML, CSS and JavaScript while you watch the preview.
+No installs, no build step.
+
+## Building with Claude
+
+1. Click **⚙** (top right) and paste your Anthropic API key
+   (get one at [console.anthropic.com](https://console.anthropic.com/settings/keys)).
+2. Open the **✨ Claude** tab and describe what to build or change, e.g.
+   *"a habit tracker with a weekly grid"* or *"make the buttons bigger"*.
+3. Claude replies with a short explanation and updates the files; the preview reloads.
+
+Also:
+- **+ New → "Describe your app"** creates a project and has Claude build it from scratch.
+- **✨ Ask Claude to fix errors** appears above the preview when your code throws an error.
+- **↶ Undo change** reverts Claude's last edit (up to 20 steps per project).
+- Choose the model (Opus 5.5 / Sonnet 5.5 / Haiku 5.5) and effort level in settings.
+
+**About your API key:** it is stored only in your browser's local storage and sent only to
+Anthropic's API (directly from your browser — there is no server). Anyone using the same
+browser profile could read it, so don't save it on a shared computer. API usage is billed
+to your Anthropic account. Use **Forget key** in settings to remove it.
 
 ## Features
 
@@ -17,7 +37,8 @@ Shortcuts: `Ctrl/Cmd + Enter` runs the preview, `Tab` indents.
 
 ## Run it locally
 
-Just open `index.html` in your browser. Or, for a local server:
+Serve the folder with any static web server (the Claude feature needs one,
+because browsers block JavaScript modules opened straight from a file):
 
 ```bash
 python3 -m http.server 8000
@@ -47,6 +68,8 @@ To publish an app you *made* with it: click **Export**, rename the file to
 | `index.html`   | Page layout                                     |
 | `style.css`    | Look and feel (colors are at the top)           |
 | `app.js`       | Projects, editor, preview, export/import        |
+| `ai.js`        | Claude chat: prompt, streaming, applying edits  |
+| `vendor/`      | Anthropic JavaScript SDK, bundled for browsers  |
 | `templates.js` | Starter templates — add your own here           |
 
 ## Ideas to build on

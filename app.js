@@ -72,6 +72,7 @@ function openProject(id) {
   if (!p) return;
   $("projectName").value = p.name;
   showFile(activeFile);
+  window.dispatchEvent(new Event("wac:projectchange"));
   renderList();
   saveProjects();
   run();
@@ -90,7 +91,7 @@ function deleteProject(id) {
 function duplicateProject(id) {
   const p = projects.find((x) => x.id === id);
   if (!p) return;
-  const copy = { ...p, id: uid(), name: p.name + " (copy)", updated: Date.now() };
+  const copy = { ...structuredClone(p), id: uid(), name: p.name + " (copy)", updated: Date.now() };
   projects.unshift(copy);
   openProject(copy.id);
 }
@@ -124,13 +125,20 @@ function showFile(file) {
   document.querySelectorAll(".tab").forEach((t) => {
     t.classList.toggle("active", t.dataset.file === file);
   });
+  const isChat = file === "ai";
+  editor.hidden = isChat;
+  $("chatPanel").hidden = !isChat;
+  if (isChat) {
+    window.dispatchEvent(new Event("wac:showchat"));
+    return;
+  }
   editor.value = current()?.[file] ?? "";
   editor.scrollTop = 0;
 }
 
 editor.addEventListener("input", () => {
   const p = current();
-  if (!p) return;
+  if (!p || activeFile === "ai") return;
   p[activeFile] = editor.value;
   p.updated = Date.now();
   scheduleSave();
@@ -220,6 +228,7 @@ function run() {
   const p = current();
   if (!p) return;
   consoleEl.innerHTML = "";
+  $("fixBtn").hidden = true;
   preview.srcdoc = buildDocument(p, { withConsole: true });
 }
 
@@ -229,11 +238,15 @@ window.addEventListener("message", (e) => {
   line.className = e.data.level;
   line.textContent = (e.data.level === "log" || e.data.level === "info" ? "› " : e.data.level + ": ") + e.data.text;
   consoleEl.appendChild(line);
+  if (e.data.level === "error") $("fixBtn").hidden = false;
   consoleEl.scrollTop = consoleEl.scrollHeight;
 });
 
 $("runBtn").onclick = run;
-$("clearConsole").onclick = () => (consoleEl.innerHTML = "");
+$("clearConsole").onclick = () => {
+  consoleEl.innerHTML = "";
+  $("fixBtn").hidden = true;
+};
 
 $("openTabBtn").onclick = () => {
   const p = current();
@@ -287,17 +300,47 @@ $("templateList").innerHTML = TEMPLATES.map(
 
 $("newBtn").onclick = () => {
   $("newName").value = "My App";
+  $("newPrompt").value = "";
   dialog.showModal();
   $("newName").select();
 };
 
 dialog.addEventListener("close", () => {
   if (dialog.returnValue !== "ok") return;
-  const templateId = dialog.querySelector("input[name=template]:checked")?.value;
+  const prompt = $("newPrompt").value.trim();
+  const templateId = prompt ? "blank" : dialog.querySelector("input[name=template]:checked")?.value;
   createProject($("newName").value.trim(), templateId);
+  if (prompt) {
+    showFile("ai");
+    window.dispatchEvent(new CustomEvent("wac:ask", { detail: prompt }));
+  }
 });
 
 $("toggleSidebar").onclick = () => $("sidebar").classList.toggle("hidden");
+
+// ---------- Shared with ai.js ----------
+
+window.WAC = {
+  current,
+  run,
+  saveProjects,
+  showFile,
+  getConsoleErrors: () =>
+    [...consoleEl.querySelectorAll(".error")].map((el) => el.textContent).join("\n"),
+  // Replace project files (only the ones given) and refresh everything.
+  setFiles(files) {
+    const p = current();
+    if (!p) return;
+    for (const key of ["html", "css", "js"]) {
+      if (typeof files[key] === "string") p[key] = files[key];
+    }
+    p.updated = Date.now();
+    saveProjects();
+    if (activeFile !== "ai") showFile(activeFile);
+    run();
+  },
+  isActive: (id) => id === activeId,
+};
 
 // ---------- Start ----------
 
